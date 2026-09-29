@@ -1,0 +1,290 @@
+<title>SBI日本株ポートフォリオ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 証券会社の口座画面をそのまま読める形に。サマリー → 配分 → 明細の順に一列で流す */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #14171f;
+  --ink-2: #4c5160;
+  --ink-3: #7b8091;
+  --line: #e2e4ea;
+  --accent: #27408b;
+  --up: #c8322f;      /* 日本式：値上がり＝赤 */
+  --down: #1f5fbf;    /* 値下がり＝青 */
+  --bar: #2a78d6;
+  --bar-soft: #cde2fb;
+  --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100; --c5: #e87ba4; --c6: #008300;
+  --warn-bg: #fff4e0; --warn-ink: #7a4b00;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+  --f-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111318; --surface: #1a1d24; --ink: #f2f3f6; --ink-2: #b9bdc9; --ink-3: #8a8fa0; --line: #2c303a;
+    --accent: #9fb3f0; --up: #ff7b6e; --down: #6aa6ff; --bar: #3987e5; --bar-soft: #1c2c44;
+    --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #008300;
+    --warn-bg: #3a2c10; --warn-ink: #ffd48a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111318; --surface: #1a1d24; --ink: #f2f3f6; --ink-2: #b9bdc9; --ink-3: #8a8fa0; --line: #2c303a;
+  --accent: #9fb3f0; --up: #ff7b6e; --down: #6aa6ff; --bar: #3987e5; --bar-soft: #1c2c44;
+  --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #008300;
+  --warn-bg: #3a2c10; --warn-ink: #ffd48a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: grid; gap: 28px; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--ink-3); }
+
+header { display: grid; gap: 4px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--ink-3); }
+h1 { margin: 0; font-size: clamp(22px, 4vw, 30px); font-weight: 700; text-wrap: balance; }
+h2 { margin: 0 0 12px; font-size: 17px; font-weight: 700; }
+.asof { color: var(--ink-2); font-size: 13px; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.kpi { background: var(--surface); padding: 16px 18px; display: grid; gap: 2px; }
+.kpi .label { font-size: 12px; color: var(--ink-3); letter-spacing: .06em; }
+.kpi .value { font-size: clamp(22px, 3.4vw, 28px); font-weight: 600; }
+.kpi .sub { font-size: 13px; color: var(--ink-2); }
+
+section { display: grid; gap: 4px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+.note { font-size: 13px; color: var(--ink-3); margin: 0; }
+
+/* 100%積み上げ（テーマ別） */
+.stack { display: flex; height: 28px; gap: 2px; border-radius: 4px; overflow: hidden; margin-block: 6px 14px; }
+.stack div { min-width: 2px; }
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 24px; margin: 0; padding: 0; list-style: none; }
+.legend li { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: baseline; font-size: 14px; }
+.legend .sw { width: 12px; height: 12px; border-radius: 3px; transform: translateY(1px); }
+.legend .members { grid-column: 2 / -1; font-size: 12px; color: var(--ink-3); margin-top: -4px; }
+
+/* 銘柄別バー */
+.bars { display: grid; gap: 6px; }
+.brow { display: grid; grid-template-columns: minmax(96px, 150px) 1fr 64px; gap: 10px; align-items: center; font-size: 13px; position: relative; }
+.brow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brow .track { height: 14px; position: relative; }
+.brow .fill { height: 100%; background: var(--bar); border-radius: 0 4px 4px 0; min-width: 2px; }
+.brow .pct { text-align: right; color: var(--ink-2); }
+.brow:hover .fill, .brow:focus-visible .fill { background: var(--accent); }
+.brow:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.tip { position: fixed; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; padding: 8px 10px; border-radius: 6px; line-height: 1.5; z-index: 5; max-width: 260px; }
+
+/* 明細テーブル */
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 760px; }
+th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 12px; font-weight: 500; color: var(--ink-3); letter-spacing: .04em; }
+th button { all: unset; cursor: pointer; }
+th button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+th button[aria-sort="descending"]::after { content: " ▼"; font-size: 10px; }
+th button[aria-sort="ascending"]::after { content: " ▲"; font-size: 10px; }
+td .code { font-family: var(--f-num); font-size: 12px; color: var(--ink-3); margin-right: 8px; }
+.tag { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 3px; margin-left: 6px; border: 1px solid var(--line); color: var(--ink-2); }
+.wcell { display: grid; grid-template-columns: 48px 56px; gap: 8px; align-items: center; justify-content: end; }
+.wcell .mini { height: 6px; background: var(--bar-soft); border-radius: 3px; overflow: hidden; }
+.wcell .mini i { display: block; height: 100%; background: var(--bar); }
+tfoot td { font-weight: 700; border-bottom: none; }
+
+.insights { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.insights li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+.pill { font-size: 11px; padding: 1px 8px; border-radius: 99px; background: var(--warn-bg); color: var(--warn-ink); white-space: nowrap; }
+.pill.info { background: var(--bar-soft); color: var(--accent); }
+footer { font-size: 12px; color: var(--ink-3); }
+@media (max-width: 520px) { .brow { grid-template-columns: 92px 1fr 52px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">SBI証券 ｜ 口座管理 › 保有証券</div>
+    <h1>日本株ポートフォリオ</h1>
+    <div class="asof">2026年9月29日 15:46〜15:48 時点の保有証券画面より作成</div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <h2>テーマ別の配分</h2>
+    <div class="panel">
+      <div class="stack" id="stack" role="img" aria-label="テーマ別配分の100%積み上げバー"></div>
+      <ul class="legend" id="legend"></ul>
+    </div>
+    <p class="note">分類は事業内容にもとづく目安で、東証33業種とは一致しません。</p>
+  </section>
+
+  <section>
+    <h2>注目点</h2>
+    <div class="panel"><ul class="insights" id="insights"></ul></div>
+  </section>
+
+  <section>
+    <h2>銘柄別の構成比</h2>
+    <div class="panel"><div class="bars" id="bars"></div></div>
+  </section>
+
+  <section>
+    <h2>保有明細</h2>
+    <div class="panel tablewrap">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+    <p class="note">株価は「評価額 ÷ 保有株数」で算出。前日比は保有全体の評価額の変化です。「S株」は単元（100株）未満の保有です。</p>
+  </section>
+
+  <footer>評価損益の合計（+1,194,115円／+13.60%）はSBI証券の表示値です。銘柄ごとの取得単価が入っていないため、銘柄別の損益は表示していません。</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const TOTAL_PL = 1194115;
+const THEMES = [
+  { key: "leisure", name: "レジャー・エンタメ・外食", color: "var(--c1)" },
+  { key: "semi",    name: "半導体・電機",            color: "var(--c2)" },
+  { key: "chem",    name: "化学・素材",              color: "var(--c3)" },
+  { key: "bio",     name: "バイオ創薬",              color: "var(--c4)" },
+  { key: "space",   name: "宇宙・重工",              color: "var(--c5)" },
+  { key: "power",   name: "電力",                    color: "var(--c6)" },
+];
+// [銘柄, コード, 株数, 評価額, 前日比(評価額ベース), テーマ, ETF]
+const RAW = [
+  ["Chordia", "190A", 1900, 127300, 0, "bio"],
+  ["キオクシアHD", "285A", 45, 804600, 4500, "semi"],
+  ["F&LC", "3563", 100, 505100, -1300, "leisure"],
+  ["レゾナックHD", "4004", 35, 487025, -20300, "chem"],
+  ["GX中国テック10", "404A", 2, 2366, -12, "semi", true],
+  ["菱瓦斯化", "4182", 3, 11316, -141, "chem"],
+  ["三菱ケミカルグループ", "4188", 10, 11335, -275, "chem"],
+  ["QPS HD", "464A", 40, 67640, -520, "space"],
+  ["ラウンドワン", "4680", 2800, 3423000, 0, "leisure"],
+  ["富士フイルム", "4901", 50, 165950, -1800, "chem"],
+  ["大同特鋼", "5471", 70, 173495, 1470, "chem"],
+  ["NF日経エンタメ", "586A", 350, 86975, 875, "leisure", true],
+  ["GX韓国半導体10", "633A", 100, 104500, 3000, "semi", true],
+  ["クラサスケミカル", "646A", 35, 8400, 0, "chem"],
+  ["日立", "6501", 30, 163950, -1590, "semi"],
+  ["安川電", "6506", 30, 135840, 2250, "semi"],
+  ["IHI", "7013", 20, 53480, -2020, "space"],
+  ["サンリオ", "8136", 3000, 3534000, 1500, "leisure"],
+  ["北海電力", "9509", 100, 109950, -4050, "power"],
+];
+const H = RAW.map(([name, code, qty, value, chg, theme, etf]) => ({
+  name, code, qty, value, chg, theme, etf: !!etf,
+  price: value / qty,
+  chgPct: chg / (value - chg) * 100,
+  odd: !etf && qty % 100 !== 0,
+}));
+const total = H.reduce((s, h) => s + h.value, 0);
+const dayChg = H.reduce((s, h) => s + h.chg, 0);
+H.forEach(h => h.weight = h.value / total * 100);
+
+const yen = n => Math.round(n).toLocaleString("ja-JP");
+const signed = n => (n > 0 ? "+" : n < 0 ? "−" : "±") + yen(Math.abs(n));
+const pct = (n, d = 2) => (n > 0 ? "+" : n < 0 ? "−" : "±") + Math.abs(n).toFixed(d) + "%";
+const cls = n => n > 0 ? "up" : n < 0 ? "down" : "flat";
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+// KPI
+const cost = total - TOTAL_PL;
+const byW = [...H].sort((a, b) => b.value - a.value);
+const top2 = byW[0].weight + byW[1].weight;
+document.getElementById("kpis").innerHTML = [
+  ["評価額合計", `${yen(total)}<small style="font-size:.55em">円</small>`, `取得額 約${yen(cost)}円`],
+  ["評価損益", `<span class="${cls(TOTAL_PL)}">${signed(TOTAL_PL)}</span>`, `<span class="${cls(TOTAL_PL)}">${pct(TOTAL_PL / cost * 100)}</span>`],
+  ["本日の前日比", `<span class="${cls(dayChg)}">${signed(dayChg)}</span>`, `<span class="${cls(dayChg)}">${pct(dayChg / (total - dayChg) * 100)}</span>`],
+  ["上位2銘柄の比率", `${top2.toFixed(1)}%`, `${H.length}銘柄中（${esc(byW[0].name)}・${esc(byW[1].name)}）`],
+].map(([l, v, s]) => `<div class="kpi"><span class="label">${l}</span><span class="value num">${v}</span><span class="sub num">${s}</span></div>`).join("");
+
+// テーマ別
+const themes = THEMES.map(t => {
+  const m = H.filter(h => h.theme === t.key).sort((a, b) => b.value - a.value);
+  const v = m.reduce((s, h) => s + h.value, 0);
+  return { ...t, members: m, value: v, weight: v / total * 100 };
+}).sort((a, b) => b.value - a.value);
+document.getElementById("stack").innerHTML = themes.map(t =>
+  `<div style="flex:${t.value};background:${t.color}" data-tip="${esc(t.name)}｜${yen(t.value)}円｜${t.weight.toFixed(1)}%"></div>`).join("");
+document.getElementById("legend").innerHTML = themes.map(t =>
+  `<li><span class="sw" style="background:${t.color}"></span><span>${esc(t.name)}</span><span class="num">${t.weight.toFixed(1)}%</span>
+   <span class="members">${t.members.map(m => esc(m.name)).join("・")}</span></li>`).join("");
+
+// 銘柄別バー
+const maxW = byW[0].weight;
+document.getElementById("bars").innerHTML = byW.map(h =>
+  `<div class="brow" tabindex="0" data-tip="${esc(h.name)}（${h.code}）｜${yen(h.value)}円｜${h.weight.toFixed(2)}%｜${yen(h.qty)}株">
+     <span class="nm">${esc(h.name)}</span>
+     <span class="track"><span class="fill" style="display:block;width:${h.weight / maxW * 100}%"></span></span>
+     <span class="pct num">${h.weight.toFixed(h.weight < 1 ? 2 : 1)}%</span></div>`).join("");
+
+// 注目点
+const oddList = H.filter(h => h.odd);
+const oddVal = oddList.reduce((s, h) => s + h.value, 0);
+const worst = [...H].sort((a, b) => a.chg - b.chg)[0];
+const leisure = themes.find(t => t.key === "leisure");
+const tiny = H.filter(h => h.weight < 0.2).sort((a, b) => a.value - b.value);
+document.getElementById("insights").innerHTML = [
+  ["集中", `サンリオ（${byW[0].weight.toFixed(1)}%）とラウンドワン（${byW[1].weight.toFixed(1)}%）の2銘柄で資産の約${Math.round(top2)}%を占めています。レジャー・エンタメ・外食のテーマ全体では${leisure.weight.toFixed(1)}%で、この2社の値動きがポートフォリオ全体の値動きをほぼ決めます。`],
+  ["本日", `本日の前日比 ${signed(dayChg)}円のうち、レゾナックHD（${signed(worst.chg)}円、${pct(worst.chgPct)}）が大半を占めています。キオクシアHD（+4,500円）とGX韓国半導体10（+3,000円）の上昇が一部を相殺しました。`],
+  ["S株", `単元未満（S株）の保有が${oddList.length}銘柄、合計${yen(oddVal)}円（${(oddVal / total * 100).toFixed(1)}%）あります。S株は成行注文のみで、約定価格を指定できない点に注意してください。`],
+  ["少額", `${tiny.map(h => `${esc(h.name)}（${yen(h.value)}円）`).join("、")}は構成比0.2%未満で、全体への影響はほぼありません。整理するか買い増すかを決めておくと管理が楽になります。`],
+  ["確認", `クラサスケミカルの35株はレゾナックHDの35株と同数です。レゾナックの石化事業分離に伴う割当で取得した株式と思われます。`],
+].map(([k, t]) => `<li><span class="pill${k === "確認" || k === "本日" ? " info" : ""}">${k}</span><span>${t}</span></li>`).join("");
+
+// 明細テーブル
+const COLS = [
+  { key: "name",   label: "銘柄", fmt: h => `<span class="code">${h.code}</span>${esc(h.name)}${h.etf ? '<span class="tag">ETF</span>' : ""}${h.odd ? '<span class="tag">S株</span>' : ""}` },
+  { key: "qty",    label: "保有株数", fmt: h => `<span class="num">${yen(h.qty)}</span>` },
+  { key: "price",  label: "株価（算出）", fmt: h => `<span class="num">${h.price.toLocaleString("ja-JP", { maximumFractionDigits: 1 })}</span>` },
+  { key: "value",  label: "評価額（円）", fmt: h => `<span class="num">${yen(h.value)}</span>` },
+  { key: "weight", label: "構成比", fmt: h => `<span class="wcell"><span class="mini"><i style="width:${h.weight / maxW * 100}%"></i></span><span class="num">${h.weight.toFixed(2)}%</span></span>` },
+  { key: "chg",    label: "前日比（円）", fmt: h => `<span class="num ${cls(h.chg)}">${signed(h.chg)}</span>` },
+  { key: "chgPct", label: "前日比（%）", fmt: h => `<span class="num ${cls(h.chg)}">${pct(h.chgPct)}</span>` },
+];
+let sort = { key: "value", dir: -1 };
+function renderTable() {
+  document.getElementById("thead").innerHTML = COLS.map(c =>
+    `<th><button type="button" id="sort-${c.key}" data-key="${c.key}" aria-sort="${sort.key === c.key ? (sort.dir < 0 ? "descending" : "ascending") : "none"}">${c.label}</button></th>`).join("");
+  const rows = [...H].sort((a, b) => {
+    const x = a[sort.key], y = b[sort.key];
+    return (typeof x === "string" ? x.localeCompare(y, "ja") : x - y) * sort.dir;
+  });
+  document.getElementById("tbody").innerHTML = rows.map(h => `<tr>${COLS.map(c => `<td>${c.fmt(h)}</td>`).join("")}</tr>`).join("");
+  document.getElementById("tfoot").innerHTML = `<tr><td>合計（${H.length}銘柄）</td><td></td><td></td><td class="num">${yen(total)}</td><td class="num">100.00%</td><td class="num ${cls(dayChg)}">${signed(dayChg)}</td><td class="num ${cls(dayChg)}">${pct(dayChg / (total - dayChg) * 100)}</td></tr>`;
+}
+document.getElementById("thead").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const k = b.dataset.key;
+  sort = sort.key === k ? { key: k, dir: -sort.dir } : { key: k, dir: k === "name" ? 1 : -1 };
+  renderTable();
+});
+renderTable();
+
+// ツールチップ
+const tip = document.getElementById("tip");
+function showTip(el, x, y) {
+  tip.textContent = el.dataset.tip.split("｜").join("\n");
+  tip.style.whiteSpace = "pre";
+  tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  tip.style.left = Math.min(x + 12, innerWidth - r.width - 8) + "px";
+  tip.style.top = Math.max(8, y - r.height - 10) + "px";
+}
+document.addEventListener("pointermove", e => {
+  const el = e.target.closest("[data-tip]");
+  if (el) showTip(el, e.clientX, e.clientY); else tip.hidden = true;
+});
+document.addEventListener("focusin", e => {
+  const el = e.target.closest("[data-tip]");
+  if (el) { const r = el.getBoundingClientRect(); showTip(el, r.left + r.width / 2, r.top); }
+});
+document.addEventListener("focusout", () => { tip.hidden = true; });
+</script>
